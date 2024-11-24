@@ -66,4 +66,4 @@ io.on('connection', (socket) => {
 });
 
 
-server.listen(PORT, () => console.log(`Listening on port ${PORT}`));
+server.listen(PORT, "0.0.0.0", () => console.log(`Listening on port ${PORT}`));
