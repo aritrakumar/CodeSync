@@ -5,29 +5,34 @@ const path = require('path');
 const { Server } = require('socket.io');
 const ACTIONS = require('./src/Actions');
 
-const PORT = process.env.PORT || 3000; // Ensure the platform's port is used
+const PORT = process.env.PORT || 3000; // Dynamic port for deployment platforms
 const server = http.createServer(app);
-const io = new Server(server);
+const io = new Server(server, {
+    cors: {
+        origin: '*', // Allow all origins (adjust as per requirements)
+        methods: ['GET', 'POST'],
+    },
+});
 
-app.use(express.static('build')); // Serve static files
-
-// Ensure catch-all route to serve index.html for SPA
+console.log('Starting server...');
+app.use(express.static(path.join(__dirname, 'build')));
+app.get('/health', (req, res) => {
+    res.status(200).send('Service is healthy');
+});
 app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'build', 'index.html'));
 });
 
 const userSocketMap = {};
 function getAllConnectedClients(roomId) {
-    return Array.from(io.sockets.adapter.rooms.get(roomId) || []).map(
-        (socketId) => ({
-            socketId,
-            username: userSocketMap[socketId],
-        })
-    );
+    return Array.from(io.sockets.adapter.rooms.get(roomId) || []).map((socketId) => ({
+        socketId,
+        username: userSocketMap[socketId],
+    }));
 }
 
 io.on('connection', (socket) => {
-    console.log('socket connected', socket.id);
+    console.log('Socket connected:', socket.id);
 
     socket.on(ACTIONS.JOIN, ({ roomId, username }) => {
         userSocketMap[socket.id] = username;
@@ -63,12 +68,13 @@ io.on('connection', (socket) => {
     });
 });
 
-// Bind to the port
-server.listen(PORT, () => {
+server.listen(PORT, (err) => {
+    if (err) {
+        console.error(`Failed to bind to port ${PORT}:`, err);
+        process.exit(1);
+    }
     console.log(`Server is listening on port ${PORT}`);
 });
-
-
 
 
 
